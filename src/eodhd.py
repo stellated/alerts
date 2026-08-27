@@ -1,6 +1,6 @@
 import requests
 import pandas as pd
-from .config import EODHD_API_TOKEN, EODHD_BASE
+from config import EODHD_API_TOKEN, EODHD_BASE
 
 def fetch_eod_data(code: str, country: str) -> pd.DataFrame:
     """Fetch end-of-day data for a stock from EODHD."""

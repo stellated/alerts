@@ -64,7 +64,7 @@ pytz==2023.3
 
    ```python
     from src.eodhd import fetch_eod_data
-    data = fetch_eod_data("BSL", "AX")
+    data = fetch_eod_data("BSL", "AU")
     print(data.head())
    ```
 
@@ -80,7 +80,7 @@ pytz==2023.3
 
    ```python
     from src.alerts import check_all_alerts
-    alerts = check_all_alerts([{"code": "BSL", "country": "AX", "conditions": ["alert if close below 30.50"]}])
+    alerts = check_all_alerts([{"code": "BSL", "country": "AU", "conditions": ["alert if close below 30.50"]}])
     print(alerts)
    ```
 

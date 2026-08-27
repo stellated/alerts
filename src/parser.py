@@ -4,7 +4,7 @@ from typing import List, Dict, Optional
 from pathlib import Path
 
 # Regex to extract stock code, country, and status from filename
-FILENAME_PATTERN = re.compile(r"^(\d{2})(\d{2})\.([A-Z]+)\.(AX|US)\.(\d+)\.(\w+)\.md$")
+FILENAME_PATTERN = re.compile(r"^(\d{2})(\d{2})\.([A-Z]+)\.(AU|US)\.(\d+)\.(\w+)\.md$")
 
 
 def parse_filename(filename: str) -> Optional[Dict]:

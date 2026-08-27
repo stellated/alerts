@@ -1,7 +1,8 @@
 import smtplib
 from email.mime.text import MIMEText
 import requests
-from .config import (
+import base64
+from config import (
     SMTP_SERVER, SMTP_PORT, SMTP_USERNAME, SMTP_PASSWORD,
     EMAIL_ALERTS_ADDRESS, CLICKSEND_API_USERNAME,
     CLICKSEND_API_KEY, SMS_PHONE_NUMBER
@@ -22,22 +23,29 @@ def send_email(subject: str, body: str) -> None:
 
 def send_sms(message: str) -> None:
     """Send an SMS alert via ClickSend."""
+    # Encode username:api_key in Base64
+    auth_string = f"{CLICKSEND_API_USERNAME}:{CLICKSEND_API_KEY}"
+    auth_bytes = auth_string.encode("ascii")
+    base64_auth = base64.b64encode(auth_bytes).decode("ascii")
+
     url = "https://api.clicksend.com/v3/sms/send"
     payload = {
         "messages": [
             {
-                "source": "python",
                 "to": SMS_PHONE_NUMBER,
                 "body": message,
-                "schedule": None
+                # Omit 'from' to use a shared number during trial
             }
         ]
     }
     headers = {
-        "Authorization": f"Basic {CLICKSEND_API_USERNAME}:{CLICKSEND_API_KEY}",
+        "Authorization": f"Basic {base64_auth}",
         "Content-Type": "application/json"
     }
+
     response = requests.post(url, json=payload, headers=headers)
+    if not response.ok:
+        print("ClickSend error response", response.text)
     response.raise_for_status()
 
 

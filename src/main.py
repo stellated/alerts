@@ -1,9 +1,9 @@
 from datetime import datetime
 import pytz
-from .config import TRADES_BASE_FOLDER_VM
-from .parser import get_trade_files
-from .alerts import check_all_alerts
-from .notifier import notify_alerts
+from config import TRADES_BASE_FOLDER
+from parser import get_trade_files
+from alerts import check_all_alerts
+from notifier import notify_alerts
 
 
 def main():
@@ -13,12 +13,12 @@ def main():
 
     if current_melb_time.hour != 16 or current_melb_time.minute != 30:
         print(f"Not 4:30 PM Melbourne time. Current time: {current_melb_time}")
-        return
+        #return
 
     print("Running stock alerts at 4:30 PM Melbourne time...")
 
     # Get trade files
-    trade_files = get_trade_files(TRADES_BASE_FOLDER_VM)
+    trade_files = get_trade_files(TRADES_BASE_FOLDER)
     print(f"Found {len(trade_files)} trade files to monitor.")
 
     # Check alerts
