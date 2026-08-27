@@ -1,0 +1,59 @@
+import smtplib
+from email.mime.text import MIMEText
+import requests
+from .config import (
+    SMTP_SERVER, SMTP_PORT, SMTP_USERNAME, SMTP_PASSWORD,
+    EMAIL_ALERTS_ADDRESS, CLICKSEND_API_USERNAME,
+    CLICKSEND_API_KEY, SMS_PHONE_NUMBER
+)
+
+
+def send_email(subject: str, body: str) -> None:
+    """Send an email alert."""
+    msg = MIMEText(body)
+    msg["Subject"] = subject
+    msg["From"] = SMTP_USERNAME
+    msg["To"] = EMAIL_ALERTS_ADDRESS
+
+    with smtplib.SMTP_SSL(SMTP_SERVER, SMTP_PORT) as server:
+        server.login(SMTP_USERNAME, SMTP_PASSWORD)
+        server.sendmail(SMTP_USERNAME, [EMAIL_ALERTS_ADDRESS], msg.as_string())
+
+
+def send_sms(message: str) -> None:
+    """Send an SMS alert via ClickSend."""
+    url = "https://api.clicksend.com/v3/sms/send"
+    payload = {
+        "messages": [
+            {
+                "source": "python",
+                "to": SMS_PHONE_NUMBER,
+                "body": message,
+                "schedule": None
+            }
+        ]
+    }
+    headers = {
+        "Authorization": f"Basic {CLICKSEND_API_USERNAME}:{CLICKSEND_API_KEY}",
+        "Content-Type": "application/json"
+    }
+    response = requests.post(url, json=payload, headers=headers)
+    response.raise_for_status()
+
+
+def notify_alerts(alerts: List[Dict]) -> None:
+    """Send notifications for triggered alerts."""
+    if not alerts:
+        return
+
+    # Email
+    subject = "Stock Alerts Triggered"
+    body = "\n".join([
+        f"{alert['code']}.{alert['country']}: {', '.join(alert['conditions'])}"
+        for alert in alerts
+    ])
+    send_email(subject, body)
+
+    # SMS
+    sms_message = f"Stock Alerts: {body}"
+    send_sms(sms_message)
