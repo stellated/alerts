@@ -1,6 +1,7 @@
 import pandas as pd
 from typing import List, Dict
 from eodhd import fetch_eod_data
+#
 
 
 def check_conditions(data: pd.DataFrame, conditions: List[str]) -> List[str]:
