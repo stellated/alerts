@@ -15,6 +15,7 @@ def send_email(subject: str, body: str) -> None:
     msg["Subject"] = subject
     msg["From"] = SMTP_USERNAME
     msg["To"] = EMAIL_ALERTS_ADDRESS
+    print("Sending email...")
 
     with smtplib.SMTP_SSL(SMTP_SERVER, SMTP_PORT) as server:
         server.login(SMTP_USERNAME, SMTP_PASSWORD)
@@ -27,6 +28,8 @@ def send_sms(message: str) -> None:
     auth_string = f"{CLICKSEND_API_USERNAME}:{CLICKSEND_API_KEY}"
     auth_bytes = auth_string.encode("ascii")
     base64_auth = base64.b64encode(auth_bytes).decode("ascii")
+
+    print("Sending SMS alert...")
 
     url = "https://api.clicksend.com/v3/sms/send"
     payload = {
@@ -55,13 +58,11 @@ def notify_alerts(alerts: List[Dict]) -> None:
         return
 
     # Email
-    subject = "Stock Alerts Triggered"
-    body = "\n".join([
-        f"{alert['code']}.{alert['country']}: {', '.join(alert['conditions'])}"
-        for alert in alerts
-    ])
+    subject = f"{len(alerts)} Stock Alerts Triggered"
+    body = "\n".join(
+        [f"{alert['code']}({alert['country']}): {','.join(alert['conditions'])}" for alert in alerts])
     send_email(subject, body)
 
     # SMS
-    sms_message = f"Stock Alerts: {body}"
+    sms_message = f"{len(alerts)} Stock Alerts:\n{body}"
     send_sms(sms_message)

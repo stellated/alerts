@@ -15,7 +15,7 @@ def main():
         print(f"Not 4:30 PM Melbourne time. Current time: {current_melb_time}")
         #return
 
-    print("Running stock alerts at 4:30 PM Melbourne time...")
+    print(f"Running stock alerts at 4:30 ({current_melb_time}) PM Melbourne time...")
 
     # Get trade files
     trade_files = get_trade_files(TRADES_BASE_FOLDER)
