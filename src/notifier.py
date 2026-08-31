@@ -52,7 +52,7 @@ def send_sms(message: str) -> None:
     response.raise_for_status()
 
 
-def notify_alerts(alerts: List[Dict]) -> None:
+def notify_alerts(alerts: list[dict]) -> None:
     """Send notifications for triggered alerts."""
     if not alerts:
         return
