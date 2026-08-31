@@ -13,7 +13,7 @@ def main():
 
     if current_melb_time.hour != 16 or current_melb_time.minute != 30:
         print(f"Not 4:30 PM Melbourne time. Current time: {current_melb_time}")
-        return
+        #return
 
     print(f"Running stock alerts at 4:30 ({current_melb_time}) PM Melbourne time...")
 
