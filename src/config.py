@@ -29,8 +29,8 @@ TRADES_BASE_FOLDER_VM = os.environ.get("TRADES_BASE_FOLDER_VM")
 # Set the correct trades folder based on the system
 if SYSTEM == "sirius":
     TRADES_BASE_FOLDER = TRADES_BASE_FOLDER_MAC
-elif SYSTEM == "sirius":
-    TRADES_BASE_FOLDER = TRADES_BASE_FOLDER_MAC
+elif SYSTEM == "mars":
+    TRADES_BASE_FOLDER = TRADES_BASE_FOLDER_VM
 else:
     raise Exception(f"Unknown system {SYSTEM}")
 
