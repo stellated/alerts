@@ -1,7 +1,30 @@
 import pandas as pd
-from typing import List, Dict
+from typing import List, Dict, Tuple
 from eodhd import fetch_eod_data
 
+
+def body_ends(candle: pd.Series) -> Tuple[float, float]:
+    """Return (HOC, LOC): the higher and lower of open and close."""
+    return max(candle["open"], candle["close"]), min(candle["open"], candle["close"])
+
+
+def is_inside_day(day: pd.Series, prior: pd.Series) -> bool:
+    """True if day's body (HOC/LOC) lies within prior's body. Equal values count as inside."""
+    day_hoc, day_loc = body_ends(day)
+    prior_hoc, prior_loc = body_ends(prior)
+    return day_hoc <= prior_hoc and day_loc >= prior_loc
+
+
+def reference_candle(data: pd.DataFrame) -> pd.Series:
+    """Candle that today is compared against for up/down day.
+
+    Yesterday, unless yesterday was an inside day, in which case the day before yesterday.
+    Only steps back once, even if the day before yesterday was also an inside day.
+    """
+    prev = data.iloc[-2]
+    if len(data) > 2 and is_inside_day(prev, data.iloc[-3]):
+        return data.iloc[-3]
+    return prev
 
 
 def check_conditions(data: pd.DataFrame, conditions: List[str]) -> List[str]:
@@ -36,45 +59,17 @@ def check_conditions(data: pd.DataFrame, conditions: List[str]) -> List[str]:
                 if latest["high"] > value:
                     triggered.append(f"High above {value}")
 
-            # Up day
-            elif condition == "alert on up day":
+            # Up day / down day
+            elif condition in ("alert on up day", "alert on down day"):
                 if prev is not None:
-                    today_hoc = max(latest["open"], latest["close"])
-                    today_loc = min(latest["open"], latest["close"])
-
-                    yesterday_hoc = max(prev["open"], prev["close"])
-                    yesterday_loc = min(prev["open"], prev["close"])
-
-                    # Check if yesterday was an inside day
-                    if (yesterday_hoc <= max(prev["high"], prev["low"]) and
-                        yesterday_loc >= min(prev["high"], prev["low"])):
-                        if len(data) > 2:
-                            prev_prev = data.iloc[-3]
-                            yesterday_hoc = max(prev_prev["open"], prev_prev["close"])
-                            yesterday_loc = min(prev_prev["open"], prev_prev["close"])
-
-                    if today_hoc > yesterday_hoc and today_loc > yesterday_loc:
-                        triggered.append("Up day")
-
-            # Down day
-            elif condition == "alert on down day":
-                if prev is not None:
-                    today_hoc = max(latest["open"], latest["close"])
-                    today_loc = min(latest["open"], latest["close"])
-
-                    yesterday_hoc = max(prev["open"], prev["close"])
-                    yesterday_loc = min(prev["open"], prev["close"])
-
-                    # Check if yesterday was an inside day
-                    if (yesterday_hoc <= max(prev["high"], prev["low"]) and
-                        yesterday_loc >= min(prev["high"], prev["low"])):
-                        if len(data) > 2:
-                            prev_prev = data.iloc[-3]
-                            yesterday_hoc = max(prev_prev["open"], prev_prev["close"])
-                            yesterday_loc = min(prev_prev["open"], prev_prev["close"])
-
-                    if today_hoc < yesterday_hoc and today_loc < yesterday_loc:
-                        triggered.append("Down day")
+                    today_hoc, today_loc = body_ends(latest)
+                    ref_hoc, ref_loc = body_ends(reference_candle(data))
+                    if condition == "alert on up day":
+                        if today_hoc > ref_hoc and today_loc > ref_loc:
+                            triggered.append("Up day")
+                    else:
+                        if today_hoc < ref_hoc and today_loc < ref_loc:
+                            triggered.append("Down day")
 
     return triggered
 
@@ -95,7 +90,7 @@ def check_all_alerts(trade_files: List[Dict]) -> List[Dict]:
                 result = {
                     "code": code,
                     "country": country,
-                    "conditions": conditions
+                    "triggered": triggered
                 }
                 print('\t', result)
                 results.append(result)

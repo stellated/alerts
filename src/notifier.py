@@ -63,7 +63,7 @@ def notify_alerts(alerts: list[dict]) -> None:
     # Email
     subject = f"{len(alerts)} Stock Alerts Triggered"
     body = "\n".join(
-        [f"{alert['code']}({alert['country']}): {','.join(alert['conditions'])}" for alert in alerts])
+        [f"{alert['code']}({alert['country']}): {', '.join(alert['triggered'])}" for alert in alerts])
     send_email(subject, body)
 
     # SMS
