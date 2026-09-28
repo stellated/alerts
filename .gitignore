@@ -1,0 +1,17 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# Secrets
+.env
+
+# Run output
+main.out.txt
+*.log
+
+# Trade notes (on the Mac they live in the repo folder and are rsynced to mars)
+_Trades/
+
+# macOS
+.DS_Store

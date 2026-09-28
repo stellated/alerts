@@ -37,4 +37,5 @@ Modules import each other as top-level modules (`from eodhd import ...`), so `sr
 ## Environments
 
 - Mac (`sirius`): Ian writes the trade notes here and tests. A Mac cron job rsyncs `_Trades/` to mars every 10 minutes.
-- mars: the new Ubuntu VM and the deployment target. The old VM is being retired. As of 2026-09-28, mars has no pip or venv installed.
+- mars: the new Ubuntu VM and the deployment target. The old VM is being retired. The repo is at `/home/ian/repos/alerts`, with a `.venv` (Python 3.12) that has `requirements.txt` installed. Trade notes arrive at `/home/ian/data/alerts/_Trades`.
+- `.env` holds secrets and is not committed; each machine needs its own.
