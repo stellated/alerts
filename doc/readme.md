@@ -83,7 +83,7 @@ Introduction to Claude Code CLI will occur on the new VM (mars)
 The crontab entry on the old VM is/was
 30 * * * 1-5 PYTHONPATH=/home/ian/repos/alerts/src /home/ian/repos/alerts/.venv/bin/python /home/ian/repos/alerts/src/main.py > /home/ian/repos/alerts/main.out.txt 2>&1
 
-The crotab entry on the Mac is
+The crontab entry on the Mac is
 */10 * * * * rsync -avz --delete-after /Users/ianatkinson/Repos/alerts/_Trades/ ian@mars:/home/ian/data/alerts/_Trades >> /Users/ianatkinson/Repos/alerts/rsync.log 2>&1
 
 The code is being run hourly at half past the hour.  
