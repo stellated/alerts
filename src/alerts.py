@@ -1,5 +1,6 @@
+import re
 import pandas as pd
-from typing import List, Dict, Tuple
+from typing import List, Dict, Optional, Tuple
 from eodhd import fetch_eod_data
 
 
@@ -27,49 +28,63 @@ def reference_candle(data: pd.DataFrame) -> pd.Series:
     return prev
 
 
+# Price conditions: prefix -> (candle field, test, label)
+PRICE_CONDITIONS = {
+    "alert if close below": ("close", lambda price, value: price < value, "Close below"),
+    "alert if close above": ("close", lambda price, value: price > value, "Close above"),
+    "alert if low below": ("low", lambda price, value: price < value, "Low below"),
+    "alert if high above": ("high", lambda price, value: price > value, "High above"),
+}
+
+# A price such as 30.50 or $30.50, and nothing else
+PRICE_PATTERN = re.compile(r"\$?\s*(\d+(?:\.\d+)?)")
+
+
+def parse_price(text: str) -> Optional[float]:
+    """Parse a price like '30.50' or '$30.50'. Returns None if text isn't a plain price."""
+    match = PRICE_PATTERN.fullmatch(text.strip())
+    return float(match.group(1)) if match else None
+
+
 def check_conditions(data: pd.DataFrame, conditions: List[str]) -> List[str]:
-    """Check if any alert conditions are met."""
+    """Check if any alert conditions are met.
+
+    Unrecognised conditions and bad prices are reported as ERROR entries so they get notified.
+    Matching ignores case, so "Alert on up day" works.
+    """
     triggered = []
     if not data.empty:
         latest = data.iloc[-1]  # Most recent day
         prev = data.iloc[-2] if len(data) > 1 else None
 
         for condition in conditions:
-            # Close below X
-            if condition.startswith("alert if close below"):
-                value = float(condition.split("below")[1].strip())
-                if latest["close"] < value:
-                    triggered.append(f"Close below {value}")
+            normalised = condition.lower()
+            price_prefix = next((p for p in PRICE_CONDITIONS if normalised.startswith(p)), None)
 
-            # Close above X
-            elif condition.startswith("alert if close above"):
-                value = float(condition.split("above")[1].strip())
-                if latest["close"] > value:
-                    triggered.append(f"Close above {value}")
-
-            # Low below X
-            elif condition.startswith("alert if low below"):
-                value = float(condition.split("below")[1].strip())
-                if latest["low"] < value:
-                    triggered.append(f"Low below {value}")
-
-            # High above X
-            elif condition.startswith("alert if high above"):
-                value = float(condition.split("above")[1].strip())
-                if latest["high"] > value:
-                    triggered.append(f"High above {value}")
+            # Close/low/high below/above X
+            if price_prefix:
+                field, test, label = PRICE_CONDITIONS[price_prefix]
+                value = parse_price(normalised[len(price_prefix):])
+                if value is None:
+                    triggered.append(f"ERROR bad price in condition: '{condition}'")
+                elif test(latest[field], value):
+                    triggered.append(f"{label} {value}")
 
             # Up day / down day
-            elif condition in ("alert on up day", "alert on down day"):
+            elif normalised in ("alert on up day", "alert on down day"):
                 if prev is not None:
                     today_hoc, today_loc = body_ends(latest)
                     ref_hoc, ref_loc = body_ends(reference_candle(data))
-                    if condition == "alert on up day":
+                    if normalised == "alert on up day":
                         if today_hoc > ref_hoc and today_loc > ref_loc:
                             triggered.append("Up day")
                     else:
                         if today_hoc < ref_hoc and today_loc < ref_loc:
                             triggered.append("Down day")
+
+            # Anything else is a typo or unsupported syntax: report it so it isn't silently ignored
+            else:
+                triggered.append(f"ERROR unrecognised condition: '{condition}'")
 
     return triggered
 

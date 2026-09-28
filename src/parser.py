@@ -29,9 +29,10 @@ def extract_conditions(filepath: str) -> List[str]:
     conditions = []
     for line in lines:
         line = line.strip()
-        if line.startswith("> alert"):
-            condition = line[2:].strip()  # Remove "> "
-            conditions.append(condition)
+        if line.startswith(">"):
+            condition = line[1:].strip()  # Remove ">"
+            if condition:
+                conditions.append(condition)
     return conditions
 
 
