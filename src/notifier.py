@@ -54,18 +54,34 @@ def send_sms(message: str) -> None:
         print("ClickSend error response", response.text)
     response.raise_for_status()
 
+    # ClickSend returns HTTP 200 even when a message is rejected (e.g. insufficient credit),
+    # so check the overall response code and each message's status.
+    result = response.json()
+    print(f"ClickSend response: {result.get('response_code')} {result.get('response_msg')}")
+    if result.get("response_code") != "SUCCESS":
+        raise RuntimeError(f"ClickSend: {result.get('response_code')} {result.get('response_msg')}")
+    messages = result.get("data", {}).get("messages", [])
+    failed = [m.get("status") for m in messages if m.get("status") != "SUCCESS"]
+    if not messages or failed:
+        raise RuntimeError(f"ClickSend message status: {', '.join(failed) or 'no messages queued'}")
+
 
 def notify_alerts(alerts: list[dict]) -> None:
     """Send notifications for triggered alerts."""
     if not alerts:
         return
 
-    # Email
     subject = f"{len(alerts)} Stock Alerts Triggered"
     body = "\n".join(
         [f"{alert['code']}({alert['country']}): {', '.join(alert['triggered'])}" for alert in alerts])
-    send_email(subject, body)
 
-    # SMS
+    # SMS first, so that a failure can be reported in the email
     sms_message = f"{len(alerts)} Stock Alerts:\n{body}"
-    send_sms(sms_message)
+    try:
+        send_sms(sms_message)
+    except Exception as e:
+        print(f"SMS FAILED: {e}")
+        body += f"\n\nSMS FAILED: {e}"
+
+    # Email
+    send_email(subject, body)

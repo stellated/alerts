@@ -1,7 +1,12 @@
 import re
+from datetime import date
 import pandas as pd
+import requests
 from typing import List, Dict, Optional, Tuple
-from eodhd import fetch_eod_data
+from eodhd import fetch_eod_data, LOOKBACK_DAYS
+
+# Latest price older than this is reported as stale. Allows for weekends and public holidays.
+MAX_PRICE_AGE_DAYS = 5
 
 
 def body_ends(candle: pd.Series) -> Tuple[float, float]:
@@ -89,6 +94,16 @@ def check_conditions(data: pd.DataFrame, conditions: List[str]) -> List[str]:
     return triggered
 
 
+def price_data_error(data: pd.DataFrame) -> Optional[str]:
+    """Return an error message if there is no recent price data (e.g. delisted or suspended)."""
+    if data.empty:
+        return f"ERROR no price data in the last {LOOKBACK_DAYS} days"
+    last = date.fromisoformat(data.iloc[-1]["date"])
+    if (date.today() - last).days > MAX_PRICE_AGE_DAYS:
+        return f"ERROR no recent price data (last: {last})"
+    return None
+
+
 def check_all_alerts(trade_files: List[Dict]) -> List[Dict]:
     """Check all trade files for triggered alerts."""
     results = []
@@ -97,20 +112,32 @@ def check_all_alerts(trade_files: List[Dict]) -> List[Dict]:
         country = trade["country"]
         conditions = trade["conditions"]
 
+        # Errors are reported as alerts so they get notified.
+        # Messages avoid str(e) for requests errors, which includes the URL and so the API token.
         try:
             data = fetch_eod_data(code, country)
-            triggered = check_conditions(data, conditions)
-            print(code, country, triggered)
-            if triggered:
-                result = {
-                    "code": code,
-                    "country": country,
-                    "triggered": triggered
-                }
-                print('\t', result)
-                results.append(result)
+            stale = price_data_error(data)
+            triggered = [stale] if stale else check_conditions(data, conditions)
+        except requests.HTTPError as e:
+            if e.response is not None and e.response.status_code == 404:
+                triggered = ["ERROR ticker not found on EODHD"]
+            else:
+                status = e.response.status_code if e.response is not None else "unknown"
+                triggered = [f"ERROR fetching price data: HTTP {status}"]
+        except requests.RequestException as e:
+            triggered = [f"ERROR fetching price data: {type(e).__name__}"]
         except Exception as e:
-            print(f"Error fetching data for {code}.{country}: {e}")
+            triggered = [f"ERROR checking alerts: {e}"]
+
+        print(code, country, triggered)
+        if triggered:
+            result = {
+                "code": code,
+                "country": country,
+                "triggered": triggered
+            }
+            print('\t', result)
+            results.append(result)
 
     print(f"{len(results)} results:")
     for result in results:
